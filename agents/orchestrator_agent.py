@@ -75,7 +75,7 @@ Return ONLY a numbered list of queries, one per line, like:
                     {"role": "system", "content": "You are an expert at breaking down complex research requests into focused, searchable queries."},
                     {"role": "user", "content": split_prompt}
                 ],
-                temperature=0.3,
+                temperature=0.4,
                 max_tokens=500
             )
             

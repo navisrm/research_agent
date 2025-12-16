@@ -78,7 +78,7 @@ Provide an improved version of the draft that:
                     {"role": "system", "content": "You are an expert editor and validator. You review content critically, verify that all facts are properly cited, remove unsupported claims, and improve drafts while maintaining strict adherence to cited sources and accuracy."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0,  # Lower temperature for more focused improvements
+                temperature=0.4,  # Lower temperature for more focused improvements
                 max_tokens=10000
             )
             
