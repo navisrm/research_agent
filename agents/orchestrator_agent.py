@@ -10,21 +10,24 @@ from .reflection_agent import ReflectionAgent
 class OrchestratorAgent:
     """Orchestrator that manages query splitting and coordinates research and reflection agents."""
     
-    def __init__(self, openai_api_key: str = None, tavily_api_key: str = None):
+    def __init__(self, openai_api_key: str = None, tavily_api_key: str = None, model_name: str = None):
         """
         Initialize the Orchestrator Agent.
         
         Args:
             openai_api_key: OpenAI API key. If None, reads from environment variable.
             tavily_api_key: Tavily API key. If None, reads from environment variable.
+            model_name: OpenAI model name. If None, reads from OPENAI_MODEL env var (default: gpt-4o).
         """
         self.openai_api_key = openai_api_key or os.getenv('OPENAI_API_KEY')
         if not self.openai_api_key:
             raise ValueError("OpenAI API key is required. Set OPENAI_API_KEY environment variable.")
         
+        self.model_name = model_name or os.getenv('OPENAI_MODEL', 'gpt-4o')
+        
         self.client = OpenAI(api_key=self.openai_api_key)
-        self.research_agent = ResearchAgent(openai_api_key, tavily_api_key)
-        self.reflection_agent = ReflectionAgent(openai_api_key)
+        self.research_agent = ResearchAgent(openai_api_key, tavily_api_key, model_name)
+        self.reflection_agent = ReflectionAgent(openai_api_key, model_name)
     
     def split_query(self, topic: str, requirements: str = None, max_query_length: int = 200) -> List[str]:
         """
@@ -57,7 +60,7 @@ Original Request:
         if requirements:
             split_prompt += f"Requirements:\n{requirements}\n\n"
         
-        split_prompt += """Please split this into 2-5 focused search queries that:
+        split_prompt += """Please split this into 2-10 focused search queries, as required, that:
 1. Cover different aspects or sub-topics of the main request
 2. Are specific and searchable (each under 200 characters)
 3. Together comprehensively cover the original request
@@ -70,7 +73,7 @@ Return ONLY a numbered list of queries, one per line, like:
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o",
+                model=self.model_name,
                 messages=[
                     {"role": "system", "content": "You are an expert at breaking down complex research requests into focused, searchable queries."},
                     {"role": "user", "content": split_prompt}
@@ -135,7 +138,7 @@ Return ONLY a numbered list of queries, one per line, like:
         self,
         topic: str,
         requirements: str = None,
-        max_sources_per_query: int = 5,
+        max_sources_per_query: int = None,
         max_query_length: int = 200
     ) -> Dict[str, str]:
         """
@@ -144,12 +147,16 @@ Return ONLY a numbered list of queries, one per line, like:
         Args:
             topic: The research topic
             requirements: Optional requirements for the research
-            max_sources_per_query: Maximum sources per search query
+            max_sources_per_query: Maximum sources per search query. If None, reads from TAVILY_MAX_SOURCES env var (default: 5).
             max_query_length: Maximum length for a single query
             
         Returns:
             Dictionary with 'draft' and 'improved_draft' keys
         """
+        # Get max_sources_per_query from env if not provided
+        if max_sources_per_query is None:
+            max_sources_per_query = int(os.getenv('TAVILY_MAX_SOURCES', '5'))
+        
         print("\n[Orchestrator] Starting research workflow...")
         
         # Step 1: Split query if needed
@@ -175,7 +182,7 @@ Return ONLY a numbered list of queries, one per line, like:
         
         # Step 4: Validate and improve draft
         print("\n[4/4] Reflection Agent: Validating and improving draft...")
-        improved_draft = self.reflection_agent.validate_and_improve(
+        improved_draft, changes_summary = self.reflection_agent.validate_and_improve(
             draft=draft,
             topic=topic,
             requirements=requirements
@@ -185,6 +192,7 @@ Return ONLY a numbered list of queries, one per line, like:
         return {
             'draft': draft,
             'improved_draft': improved_draft,
+            'changes_summary': changes_summary,
             'sources_count': len(all_sources),
             'queries_count': len(queries)
         }

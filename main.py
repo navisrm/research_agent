@@ -15,11 +15,15 @@ def main():
     parser = argparse.ArgumentParser(description='Research Agent System')
     parser.add_argument('--topic', type=str, required=True, help='Research topic')
     parser.add_argument('--requirements', type=str, default=None, help='Requirements for the research')
-    parser.add_argument('--max-sources', type=int, default=5, help='Maximum number of sources per query (default: 5)')
+    parser.add_argument('--max-sources', type=int, default=None, help='Maximum number of sources per query (default: from TAVILY_MAX_SOURCES env var or 5)')
     parser.add_argument('--max-query-length', type=int, default=200, help='Maximum length for a single query before splitting (default: 200)')
     parser.add_argument('--output', type=str, default=None, help='Output file path (optional)')
     
     args = parser.parse_args()
+    
+    # Get max_sources from env if not provided via CLI
+    if args.max_sources is None:
+        args.max_sources = int(os.getenv('TAVILY_MAX_SOURCES', '5'))
     
     print("=" * 60)
     print("Research Agent System")
@@ -45,6 +49,7 @@ def main():
         
         draft = results['draft']
         improved_draft = results['improved_draft']
+        changes_summary = results.get('changes_summary', 'No changes summary available.')
         
         print("\n" + "=" * 60)
         print("\n--- Initial Draft ---")
@@ -52,6 +57,9 @@ def main():
         print("\n" + "-" * 60)
         print("\n--- Final Improved Draft ---")
         print(improved_draft)
+        print("\n" + "=" * 60)
+        print("\n--- Changes Summary (For Review) ---")
+        print(changes_summary)
         print("\n" + "=" * 60)
         print(f"\nSummary: {results['queries_count']} query/queries executed, {results['sources_count']} unique sources collected")
         
@@ -71,6 +79,10 @@ def main():
                 f.write("IMPROVED DRAFT\n")
                 f.write("=" * 60 + "\n\n")
                 f.write(improved_draft)
+                f.write("\n\n" + "=" * 60 + "\n")
+                f.write("CHANGES SUMMARY (FOR REVIEW)\n")
+                f.write("=" * 60 + "\n\n")
+                f.write(changes_summary)
             print(f"\n✓ Results saved to: {args.output}")
         
         print("\n✓ Research process completed successfully!")

@@ -30,13 +30,17 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-3. Create a `.env` file with your API keys:
+3. Create a `.env` file with your API keys (see `.env.example` for template):
 ```
 OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_MODEL=gpt-4o                    # Optional: OpenAI model to use (default: gpt-4o)
 TAVILY_API_KEY=your_tavily_api_key_here
+TAVILY_MAX_SOURCES=5                    # Optional: Max sources per query (default: 5)
 ```
 
    You can get your Tavily API key from: https://tavily.com/
+   
+   **Note**: The `OPENAI_MODEL` and `TAVILY_MAX_SOURCES` are optional and will use defaults if not set.
 
 ## Usage
 

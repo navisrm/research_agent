@@ -9,13 +9,14 @@ from tavily import TavilyClient
 class ResearchAgent:
     """Agent responsible for researching topics and creating initial drafts."""
     
-    def __init__(self, openai_api_key: str = None, tavily_api_key: str = None):
+    def __init__(self, openai_api_key: str = None, tavily_api_key: str = None, model_name: str = None):
         """
         Initialize the Research Agent.
         
         Args:
             openai_api_key: OpenAI API key. If None, reads from environment variable.
             tavily_api_key: Tavily API key. If None, reads from environment variable.
+            model_name: OpenAI model name. If None, reads from OPENAI_MODEL env var (default: gpt-4o).
         """
         self.openai_api_key = openai_api_key or os.getenv('OPENAI_API_KEY')
         if not self.openai_api_key:
@@ -24,6 +25,8 @@ class ResearchAgent:
         self.tavily_api_key = tavily_api_key or os.getenv('TAVILY_API_KEY')
         if not self.tavily_api_key:
             raise ValueError("Tavily API key is required. Set TAVILY_API_KEY environment variable.")
+        
+        self.model_name = model_name or os.getenv('OPENAI_MODEL', 'gpt-4o')
         
         self.client = OpenAI(api_key=self.openai_api_key)
         self.tavily_client = TavilyClient(api_key=self.tavily_api_key)
@@ -134,7 +137,7 @@ Make sure to:
         try:
             # Use OpenAI to generate the draft based on sources
             response = self.client.chat.completions.create(
-                model="gpt-4o",
+                model=self.model_name,
                 messages=[
                     {"role": "system", "content": "You are an expert researcher and content creator. You create comprehensive, well-structured research documents based ONLY on provided sources, with proper citations. You never make unsupported claims and stick strictly to facts that are cited in the sources."},
                     {"role": "user", "content": prompt}
@@ -189,57 +192,67 @@ Topic: {topic}
         
         prompt += """
 CRITICAL REQUIREMENTS:
-- Stick strictly to facts that are cited in the provided sources
-- DO NOT make any statement unless it is directly supported by a source
+- Base all statements on facts identified in the provided sources
 - Every factual claim MUST be followed by a citation (e.g., [Source 1], [Source 3])
+- Make meaningful statements and insights based on the facts, not just list facts
+- For each finding or fact identified, provide multiple related statements that explain, contextualize, or elaborate on that finding
+- Ensure a decent amount of content per finding (aim for 3-5 statements per major finding)
+- Do not add speculation, assumptions, or unsupported claims beyond what the sources provide
 - If information is not available in the sources, do not include it
-- Do not add speculation, assumptions, or unsupported claims
 
 Using only the provided sources, produce a well-structured, evidence-based research draft on the given topic.
 
 The document should:
-	•	Begin with a concise introduction that defines the topic and scope strictly based on the sources
+	•	Begin with a concise introduction that defines the topic and scope based on the sources
 	•	Present the core findings, observations, and documented issues drawn from the sources
+	•	For each finding, provide multiple statements that:
+		- State the fact clearly
+		- Explain its significance or context
+		- Describe related details or implications
+		- Connect it to other findings when relevant
+		- Provide examples or specifics when available
 
 For the main body of the document:
 	•	Do NOT follow a fixed or predefined structure
 	•	Instead, derive a logical structure that best fits the research topic and the nature of the evidence
 	•	Organize content into clear, meaningful sections (with headings) such as:
-	•	Documented events or incidents
-	•	Reported impacts or consequences
-	•	Regulatory actions, enforcement, or responses
-	•	Patterns, frequency, or trends explicitly noted in the sources
-	•	Geographic, temporal, or community-specific details
+		- Documented events or incidents
+		- Reported impacts or consequences
+		- Regulatory actions, enforcement, or responses
+		- Patterns, frequency, or trends explicitly noted in the sources
+		- Geographic, temporal, or community-specific details
 	•	Section titles and ordering should emerge naturally from what the sources emphasize
 
     Each section must:
-	•	Contain only source-supported facts
+	•	Contain source-supported facts with multiple statements per finding
 	•	Include citations for every factual statement
-	•	Synthesize multiple sources only when they clearly align on the same fact
+	•	Provide adequate elaboration and context for each finding
+	•	Synthesize multiple sources when they provide related information
 
 Conclusion
-	•	Provide a concise summary of the documented facts and findings
+	•	Provide a comprehensive summary of the documented facts and findings
 	•	Do not introduce new information
 	•	All statements must be cited
 
 Sources
-	•	Include a clearly labeled “Sources” section
+	•	Include a clearly labeled "Sources" section
 	•	List all referenced sources with their URLs
 	•	Use consistent numbering that matches in-text citations (e.g., [Source 1])
 
 Make sure to:
 - Cite sources appropriately when using information from them (use [Source X] format)
-- Synthesize information from multiple sources only when facts align
-- Ensure the content is informative, accurate, and well-organized
+- Synthesize information from multiple sources when they provide related facts
+- Ensure the content is comprehensive, informative, accurate, and well-organized
 - Include proper attribution to sources for EVERY factual statement
+- Provide sufficient elaboration and context for each finding (aim for 3-5 statements per major finding)
 - If a source contradicts another, note the discrepancy with citations"""
 
         try:
             # Use OpenAI to generate the draft based on sources
             response = self.client.chat.completions.create(
-                model="gpt-4o",
+                model=self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are an expert researcher and content creator. You create comprehensive, well-structured research documents based ONLY on provided sources, with proper citations. You never make unsupported claims."},
+                    {"role": "system", "content": "You are an expert researcher and content creator. You create comprehensive, well-structured research documents based on facts from provided sources, with proper citations. You make meaningful statements and insights from the facts, providing adequate elaboration (3-5 statements per major finding) while ensuring all claims are supported by sources."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.4,
