@@ -24,4 +24,14 @@ __pycache__/
 *.md
 !README.md
 
+# Web app generated files
+downloads/
+static/
+*.docx
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
 

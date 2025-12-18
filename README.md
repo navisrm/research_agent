@@ -36,11 +36,36 @@ OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_MODEL=gpt-4o                    # Optional: OpenAI model to use (default: gpt-4o)
 TAVILY_API_KEY=your_tavily_api_key_here
 TAVILY_MAX_SOURCES=5                    # Optional: Max sources per query (default: 5)
+SECRET_KEY=your-secret-key-here         # Required: Secret key for JWT tokens (use a strong random string)
+ADMIN_USERNAME=admin                     # Optional: Admin panel username (default: admin)
+ADMIN_PASSWORD=admin                     # Optional: Admin panel password (default: admin)
+
+# Optional: OAuth Configuration
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+FACEBOOK_CLIENT_ID=your_facebook_client_id
+FACEBOOK_CLIENT_SECRET=your_facebook_client_secret
 ```
 
    You can get your Tavily API key from: https://tavily.com/
    
    **Note**: The `OPENAI_MODEL` and `TAVILY_MAX_SOURCES` are optional and will use defaults if not set.
+   
+   **OAuth Setup** (Optional):
+   - **Google OAuth**: 
+     1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+     2. Create a new project or select existing one
+     3. Enable Google+ API
+     4. Create OAuth 2.0 credentials
+     5. Add authorized redirect URI: `http://localhost:8000/api/auth/google/callback`
+     6. Copy Client ID and Client Secret to `.env`
+   
+   - **Facebook OAuth**:
+     1. Go to [Facebook Developers](https://developers.facebook.com/)
+     2. Create a new app
+     3. Add Facebook Login product
+     4. Set Valid OAuth Redirect URIs: `http://localhost:8000/api/auth/facebook/callback`
+     5. Copy App ID and App Secret to `.env`
 
 ## Usage
 
@@ -73,6 +98,56 @@ When a research request is too lengthy (exceeds `--max-query-length`), the orche
 4. Collects and deduplicates all sources
 5. Passes all sources to the Research Agent for draft creation
 
+## Web Application
+
+The system includes a FastAPI web application with a modern, user-friendly interface.
+
+### Starting the Web Server
+
+```bash
+# Activate virtual environment
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Start the FastAPI server
+python app.py
+```
+
+Or using uvicorn directly:
+```bash
+uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Then open your browser and navigate to: `http://localhost:8000`
+
+### Database Admin Panel
+
+The application includes a web-based database admin interface powered by SQLAdmin.
+
+**Access the admin panel:**
+- URL: `http://localhost:8000/admin`
+- Default credentials (set in `.env`):
+  - Username: `admin` (or set `ADMIN_USERNAME` in `.env`)
+  - Password: `admin` (or set `ADMIN_PASSWORD` in `.env`)
+
+**Features:**
+- View and manage users
+- View and manage research history
+- Search and filter records
+- Edit and delete records
+- View detailed information
+
+**Security Note:** Change the default admin credentials in production by setting `ADMIN_USERNAME` and `ADMIN_PASSWORD` in your `.env` file.
+
+### Web App Features
+
+- **Modern UI**: Clean, responsive interface with gradient design
+- **Real-time Processing**: Shows loading indicator during research
+- **Results Display**: Shows initial draft, improved draft, and changes summary
+- **Download Options**: Download results as:
+  - Markdown (`.md`) file
+  - Word Document (`.docx`) file
+- **Statistics**: Displays queries executed and sources collected
+
 ## Project Structure
 
 ```
@@ -81,8 +156,13 @@ research_agent/
 │   ├── __init__.py
 │   ├── orchestrator_agent.py  # Orchestrator that manages workflow and query splitting
 │   ├── research_agent.py      # Agent for research and draft creation
-│   └── reflection_agent.py    # Agent for validation and improvement
-├── main.py                     # Main entry point
+│   └── reflection_agent.py   # Agent for validation and improvement
+├── templates/
+│   └── index.html             # Web application UI
+├── static/                     # Static files directory
+├── downloads/                  # Generated research files
+├── app.py                     # FastAPI web application
+├── main.py                     # CLI entry point
 ├── requirements.txt
 ├── .env.example
 └── README.md
